@@ -1,0 +1,5 @@
+Submission/
+temp/
+.idea/
+__pycache__/
+*.pyc
