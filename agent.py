@@ -1,4 +1,6 @@
 import random
+from collections import deque
+import heapq
 
 class GreedyGridAgent:
     """A simple agent that tries to move around systematically to clear the grid."""
@@ -52,4 +54,99 @@ class ModelBasedAgent:
             return 'turn_left'
         else:
             self.consecutive_turns = 0
-            return 'move_forward'
+            return 'move_forward'
+
+class SearchAgent:
+    """An agent that uses search algorithms to find a path to food."""
+
+    def __init__(self):
+        self.plan = []
+        self.active_algo = 'BFS'  # 'BFS', 'DFS', or 'UCS'
+
+    def sense_and_act(self, percept: dict) -> str:
+        if not self.plan:
+            all_food = percept.get('all_food', [])
+            if not all_food:
+                return 'Stay'
+
+            agent_pos = percept.get('agent_pos', (0, 0))
+
+            # Find closest food using Manhattan distance
+            closest_food = min(all_food, key=lambda f: abs(f[0] - agent_pos[0]) + abs(f[1] - agent_pos[1]))
+
+            grid_size = percept.get('grid_size')
+            walls = set(percept.get('walls', []))
+
+            if self.active_algo == 'BFS':
+                self.plan = self.bfs_search(agent_pos, closest_food, grid_size, walls)
+            elif self.active_algo == 'DFS':
+                self.plan = self.dfs_search(agent_pos, closest_food, grid_size, walls)
+            elif self.active_algo == 'UCS':
+                self.plan = self.ucs_search(agent_pos, closest_food, grid_size, walls)
+
+        if self.plan:
+            return self.plan.pop(0)
+        return 'Stay'
+
+    def get_neighbors(self, pos, grid_size, walls):
+        x, y = pos
+        w, h = grid_size
+        neighbors = []
+        if y < h - 1 and (x, y + 1) not in walls:
+            neighbors.append(((x, y + 1), 'Up'))
+        if y > 0 and (x, y - 1) not in walls:
+            neighbors.append(((x, y - 1), 'Down'))
+        if x > 0 and (x - 1, y) not in walls:
+            neighbors.append(((x - 1, y), 'Left'))
+        if x < w - 1 and (x + 1, y) not in walls:
+            neighbors.append(((x + 1, y), 'Right'))
+        return neighbors
+
+    def bfs_search(self, start, goal, grid_size, walls):
+        queue = deque([(start, [])])
+        reached = {start}
+
+        while queue:
+            current, path = queue.popleft()
+            if current == goal:
+                return path
+
+            for next_pos, action in self.get_neighbors(current, grid_size, walls):
+                if next_pos not in reached:
+                    reached.add(next_pos)
+                    queue.append((next_pos, path + [action]))
+        return []
+
+    def dfs_search(self, start, goal, grid_size, walls):
+        stack = [(start, [])]
+        reached = {start}
+
+        while stack:
+            current, path = stack.pop()
+            if current == goal:
+                return path
+
+            for next_pos, action in self.get_neighbors(current, grid_size, walls):
+                if next_pos not in reached:
+                    reached.add(next_pos)
+                    stack.append((next_pos, path + [action]))
+        return []
+
+    def ucs_search(self, start, goal, grid_size, walls):
+        pq = [(0, start, [])]
+        reached = {}
+
+        while pq:
+            cost, current, path = heapq.heappop(pq)
+            if current == goal:
+                return path
+            
+            if current in reached and reached[current] <= cost:
+                continue
+            reached[current] = cost
+
+            for next_pos, action in self.get_neighbors(current, grid_size, walls):
+                new_cost = cost + 1
+                if next_pos not in reached or new_cost < reached[next_pos]:
+                    heapq.heappush(pq, (new_cost, next_pos, path + [action]))
+        return []

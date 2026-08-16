@@ -95,7 +95,11 @@ class VisualGridHuntGame:
             'smells_toxin': tuple(self.agent_pos) in self.toxic_traps,
             'collision': self.collision,
             'score': self.score,
-            'remaining_food': len(self.food_positions)
+            'remaining_food': len(self.food_positions),
+            'grid_size': (self.width, self.height),
+            'walls': list(self.walls),
+            'all_food': list(self.food_positions),
+            'agent_pos': tuple(self.agent_pos)
         }
 
     def execute_action(self, action: str):
@@ -274,11 +278,11 @@ class GridGameGUI:
 
 
 if __name__ == "__main__":
-    from agent import SimpleReflexAgent, ModelBasedAgent
+    from agent import SimpleReflexAgent, ModelBasedAgent, SearchAgent
     root = tk.Tk()
     
     # Try changing to ModelBasedAgent to see it escape loops!
-    agent = SimpleReflexAgent() 
+    agent = SearchAgent() 
     
     app = GridGameGUI(root, agent=agent, width=12, height=12, num_food=15, num_opponents=0)
     root.mainloop()
