@@ -1,6 +1,7 @@
 import random
 from collections import deque
 import heapq
+import math
 
 class GreedyGridAgent:
     """A simple agent that tries to move around systematically to clear the grid."""
@@ -61,7 +62,7 @@ class SearchAgent:
 
     def __init__(self):
         self.plan = []
-        self.active_algo = 'BFS'  # 'BFS', 'DFS', or 'UCS'
+        self.active_algo = 'AStar'  # 'BFS', 'DFS', 'UCS', or 'AStar'
 
     def sense_and_act(self, percept: dict) -> str:
         if not self.plan:
@@ -83,6 +84,8 @@ class SearchAgent:
                 self.plan = self.dfs_search(agent_pos, closest_food, grid_size, walls)
             elif self.active_algo == 'UCS':
                 self.plan = self.ucs_search(agent_pos, closest_food, grid_size, walls)
+            elif self.active_algo == 'AStar':
+                self.plan = self.astar_search(agent_pos, closest_food, walls, grid_size, 'manhattan')
 
         if self.plan:
             return self.plan.pop(0)
@@ -149,4 +152,43 @@ class SearchAgent:
                 new_cost = cost + 1
                 if next_pos not in reached or new_cost < reached[next_pos]:
                     heapq.heappush(pq, (new_cost, next_pos, path + [action]))
+        return []
+
+    def manhattan_distance(self, pos, goal):
+        return abs(pos[0] - goal[0]) + abs(pos[1] - goal[1])
+
+    def euclidean_distance(self, pos, goal):
+        return math.sqrt((pos[0] - goal[0])**2 + (pos[1] - goal[1])**2)
+
+    def astar_search(self, start_pos, goal_pos, walls, grid_size, heuristic_type='manhattan'):
+        pq = []
+        # Calculate initial heuristic
+        if heuristic_type == 'manhattan':
+            h_cost = self.manhattan_distance(start_pos, goal_pos)
+        else:
+            h_cost = self.euclidean_distance(start_pos, goal_pos)
+            
+        heapq.heappush(pq, (h_cost, 0, start_pos, []))
+        reached_states = set()
+
+        while pq:
+            f_cost, g_cost, current_pos, path_taken = heapq.heappop(pq)
+            
+            if current_pos == goal_pos:
+                return path_taken
+            
+            if current_pos in reached_states:
+                continue
+                
+            reached_states.add(current_pos)
+            
+            for next_pos, action in self.get_neighbors(current_pos, grid_size, walls):
+                if next_pos not in reached_states:
+                    g_new = g_cost + 1
+                    if heuristic_type == 'manhattan':
+                        h_new = self.manhattan_distance(next_pos, goal_pos)
+                    else:
+                        h_new = self.euclidean_distance(next_pos, goal_pos)
+                    f_new = g_new + h_new
+                    heapq.heappush(pq, (f_new, g_new, next_pos, path_taken + [action]))
         return []
