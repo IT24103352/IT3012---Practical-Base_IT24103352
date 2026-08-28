@@ -2,6 +2,7 @@ import random
 from collections import deque
 import heapq
 import math
+from logic_engine import KnowledgeBase
 
 class GreedyGridAgent:
     """A simple agent that tries to move around systematically to clear the grid."""
@@ -63,6 +64,13 @@ class SearchAgent:
     def __init__(self):
         self.plan = []
         self.active_algo = 'AStar'  # 'BFS', 'DFS', 'UCS', or 'AStar'
+        self.kb = KnowledgeBase()
+        self.kb.tell_rule(['TargetVisible', 'HasDust'], 'SafeToEngage')
+        self.kb.tell_rule(['SafeToEngage', 'BloodseekerMissing'], 'Retreat')
+
+    def get_tile_percepts(self, pos):
+        # Stub to simulate getting facts/percepts for a given tile position
+        return []
 
     def sense_and_act(self, percept: dict) -> str:
         if not self.plan:
@@ -184,6 +192,18 @@ class SearchAgent:
             
             for next_pos, action in self.get_neighbors(current_pos, grid_size, walls):
                 if next_pos not in reached_states:
+                    # Validate Feasibility with Logic Engine
+                    self.kb.clear_facts()
+                    
+                    # Feed the current percepts for that specific tile
+                    for percept_fact in self.get_tile_percepts(next_pos):
+                        self.kb.tell_fact(percept_fact)
+                        
+                    self.kb.forward_chain()
+                    
+                    if 'Retreat' in self.kb.facts:
+                        continue  # Skip infeasible node
+                        
                     g_new = g_cost + 1
                     if heuristic_type == 'manhattan':
                         h_new = self.manhattan_distance(next_pos, goal_pos)
